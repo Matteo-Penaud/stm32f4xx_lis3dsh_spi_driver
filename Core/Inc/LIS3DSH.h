@@ -12,8 +12,8 @@
 
 /* Registers address */
 #define LIS3DSH_REG_CTRL_REG4_ADDR	((uint8_t) 0x20)
-#define LIS3DSH_REG_CTRL_REG5_ADDR	((uint8_t) 0x23)
-#define LIS3DSH_REG_CTRL_REG6_ADDR	((uint8_t) 0x24)
+#define LIS3DSH_REG_CTRL_REG3_ADDR	((uint8_t) 0x23)
+#define LIS3DSH_REG_CTRL_REG5_ADDR	((uint8_t) 0x24)
 #define LIS3DSH_REG_STATUS_ADDR		((uint8_t) 0x27)
 #define LIS3DSH_REG_OUT_X_ADDR		((uint8_t) 0x28) /*Base address of OUT_X (H and L)*/
 #define LIS3DSH_REG_OUT_Y_ADDR		((uint8_t) 0x2A) /*Base address of OUT_Y (H and L)*/
@@ -79,7 +79,7 @@ typedef enum {
 }t_e_bool;
 
 typedef struct{
-	t_e_bool dataReady;
+	uint8_t dataReadyEnable;
 	uint8_t polarity;
 	uint8_t latching;
 
@@ -95,7 +95,7 @@ typedef struct{
 	uint8_t z_enable;
 	uint8_t y_enable;
 	uint8_t x_enable;
-	//t_s_lis3dsh_interrupt int_struct;
+	t_s_lis3dsh_interrupt *int_struct;
 }t_s_lis3dsh_init;
 
 

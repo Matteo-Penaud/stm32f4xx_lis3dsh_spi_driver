@@ -1,4 +1,4 @@
 LIS3DSH.c:27:19:LIS3DSH_Read_reg	24	static
 LIS3DSH.c:57:19:LIS3DSH_Write_reg	32	static
-LIS3DSH.c:91:19:LIS3DSH_Init	32	static
-LIS3DSH.c:138:19:LIS3DSH_Get_axes	24	static
+LIS3DSH.c:92:19:LIS3DSH_Init	32	static
+LIS3DSH.c:152:19:LIS3DSH_Get_axes	24	static

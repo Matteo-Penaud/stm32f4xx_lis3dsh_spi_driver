@@ -84,6 +84,9 @@ void Error_Handler(void);
 #define SWCLK_GPIO_Port GPIOA
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
+#define LIS3DSH_INT1_Pin GPIO_PIN_0
+#define LIS3DSH_INT1_GPIO_Port GPIOE
+#define LIS3DSH_INT1_EXTI_IRQn EXTI0_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

@@ -45,8 +45,11 @@ SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
 t_s_lis3dsh_init l_s_lis3dsh_init;
+t_s_lis3dsh_interrupt l_s_lis3dsh_interrupt;
 
 t_e_lis3dsh_error l_e_error;
+
+t_e_bool l_e_axis_ready;
 
 /* USER CODE END PV */
 
@@ -54,6 +57,7 @@ t_e_lis3dsh_error l_e_error;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -79,15 +83,23 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  uint16_t l_axes[3] = {0x00, 0x00, 0x00};
+  HAL_Delay(100);
+
+  uint16_t l_axis[3] = {0x00, 0x00, 0x00};
+
+  l_s_lis3dsh_interrupt.dataReadyEnable = LIS3DSH_CTRL_REG3_DR_EN;
+  l_s_lis3dsh_interrupt.int1_enable = LIS3DSH_CTRL_REG3_INT1_EN;
+  l_s_lis3dsh_interrupt.latching = LIS3DSH_CTRL_REG3_IEL_LATCH;
+  l_s_lis3dsh_interrupt.polarity = LIS3DSH_CTRL_REG3_IEA_HIGH;
 
   l_s_lis3dsh_init.SPI_Mode = LIS3DSH_CTRL_REG5_SIM_4WIRE;
-  l_s_lis3dsh_init.dataRate = LIS3DSH_CTRL_REG4_ODR_400;
-  l_s_lis3dsh_init.dataUpdate = LIS3DSH_CTRL_REG4_BDU_CONT;
+  l_s_lis3dsh_init.dataRate = LIS3DSH_CTRL_REG4_ODR_100;
+  l_s_lis3dsh_init.dataUpdate = LIS3DSH_CTRL_REG4_BDU_EN;
   l_s_lis3dsh_init.full_scale = LIS3DSH_CTRL_REG5_FSCALE_2;
   l_s_lis3dsh_init.x_enable = LIS3DSH_CTRL_REG4_XEN_EN;
   l_s_lis3dsh_init.y_enable = LIS3DSH_CTRL_REG4_YEN_EN;
   l_s_lis3dsh_init.z_enable = LIS3DSH_CTRL_REG4_ZEN_EN;
+  l_s_lis3dsh_init.int_struct = &l_s_lis3dsh_interrupt;
 
   /* USER CODE END Init */
 
@@ -101,14 +113,18 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI1_Init();
-  /* USER CODE BEGIN 2 */
 
+  /* Initialize interrupts */
+  MX_NVIC_Init();
+  /* USER CODE BEGIN 2 */
   l_e_error = LIS3DSH_Init(&hspi1, GPIOE, GPIO_PIN_3, &l_s_lis3dsh_init);
 
   if(l_e_error != LIS3DSH_OK)
   {
 	  return l_e_error;
   }
+
+  l_e_axis_ready = FALSE;
 
   /* USER CODE END 2 */
 
@@ -119,27 +135,33 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
 	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
 
-	  LIS3DSH_Get_axes(&hspi1, l_axes);
+	  if(l_e_axis_ready == TRUE)
+	  {
+		  LIS3DSH_Get_axes(&hspi1, l_axis);
 
-	  if(l_axes[0] < 25000)
-	  {
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
-	  }else if(l_axes[0] >= 40000)
-	  {
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
-	  }
+		  if(l_axis[0] > 5000 && l_axis[0] < 19000)
+		  {
+			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+		  }else if(l_axis[0] >= 40000 && l_axis[0] < 65000)
+		  {
+			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
+		  }
 
-	  if(l_axes[1] < 25000)
-	  {
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
-	  }else if(l_axes[1] >= 40000)
-	  {
-		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+		  if(l_axis[1] > 5000 && l_axis[1] < 19000)
+		  {
+			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+		  }else if(l_axis[1] >= 50000)
+		  {
+			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+		  }
+
+		  l_e_axis_ready = FALSE;
 	  }
 
 	  HAL_Delay(10);
@@ -191,6 +213,17 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* EXTI0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+}
+
+/**
   * @brief SPI1 Initialization Function
   * @param None
   * @retval None
@@ -213,7 +246,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -271,15 +304,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PE0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin : LIS3DSH_INT1_Pin */
+  GPIO_InitStruct.Pin = LIS3DSH_INT1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+  HAL_GPIO_Init(LIS3DSH_INT1_GPIO_Port, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == GPIO_PIN_0)
+	{
+		l_e_axis_ready = TRUE;
+	}
+}
 
 /* USER CODE END 4 */
 

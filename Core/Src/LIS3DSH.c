@@ -62,16 +62,17 @@ t_e_lis3dsh_error LIS3DSH_Write_reg(SPI_HandleTypeDef *hspi,
 	dataW[0] = 0xEF & reg_addr;
 	uint8_t dataR[] = {0x00, 0x00};
 
-//	LIS3DSH_Read_reg(hspi, reg_addr, dataR, 2);
-//	dataW[1] |= dataR[1];
-
 	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_RESET);
 	if(HAL_SPI_Transmit(hspi, dataW, size, 10) == HAL_OK)
 	{
 		HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
-		LIS3DSH_Read_reg(hspi, reg_addr, dataR, 2);
-
-		return LIS3DSH_OK;
+		if(LIS3DSH_Read_reg(hspi, reg_addr, dataR, 2) == LIS3DSH_OK)
+		{
+			if(dataR[1] == dataW[1])
+			{
+				return LIS3DSH_OK;
+			}
+		}
 	}
 
 	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
@@ -101,11 +102,26 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 
 	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
 
+	/* Sending dummy word on the SPI to avoid bugs */
+	LIS3DSH_Read_reg(hspi, 0x00, l_reg_val, 2);
+
 	/* Configuring CTRL_REG5 */
 	l_reg_val[1] = (init_struct->full_scale & 0x38) \
 				 | (init_struct->SPI_Mode & 0x01);
 
 	if(LIS3DSH_Write_reg(hspi, LIS3DSH_REG_CTRL_REG5_ADDR, l_reg_val, 2) != LIS3DSH_OK)
+	{
+		return LIS3DSH_INIT_ERROR;
+	}
+
+	/* Configuring CTRL_REG3 */
+	l_reg_val[1] = (init_struct->int_struct->dataReadyEnable & 0x80) \
+				 | (init_struct->int_struct->polarity & 0x40) \
+				 | (init_struct->int_struct->latching & 0x20) \
+				 | (init_struct->int_struct->int2_enable & 0x10) \
+				 | (init_struct->int_struct->int1_enable & 0x08);
+
+	if(LIS3DSH_Write_reg(hspi, LIS3DSH_REG_CTRL_REG3_ADDR, l_reg_val, 2) != LIS3DSH_OK)
 	{
 		return LIS3DSH_INIT_ERROR;
 	}
@@ -121,8 +137,6 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 	{
 		return LIS3DSH_INIT_ERROR;
 	}
-
-	/*TODO : Configuring CTRL_REG3 (Interrupts) */
 
 	return LIS3DSH_OK;
 }
@@ -157,4 +171,6 @@ t_e_lis3dsh_error LIS3DSH_Get_axes(SPI_HandleTypeDef *hspi,
 		return LIS3DSH_GET_AXE_Z_ERROR;
 	}
 	axes[2] = dataR[1] | dataR[2] << 8;
+
+	return LIS3DSH_OK;
 }
