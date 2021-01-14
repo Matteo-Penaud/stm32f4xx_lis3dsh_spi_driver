@@ -74,7 +74,9 @@ static void MX_NVIC_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  uint16_t l_axis[3] = {0x00, 0x00, 0x00};
+  float l_accelerations[3] = {0.0f, 0.0f, 0.0f};
+  uint8_t l_multiple = 2;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -84,8 +86,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   HAL_Delay(100);
-
-  uint16_t l_axis[3] = {0x00, 0x00, 0x00};
 
   l_s_lis3dsh_interrupt.dataReadyEnable = LIS3DSH_CTRL_REG3_DR_EN;
   l_s_lis3dsh_interrupt.int1_enable = LIS3DSH_CTRL_REG3_INT1_EN;
@@ -145,18 +145,23 @@ int main(void)
 	  {
 		  LIS3DSH_Get_axes(&hspi1, l_axis);
 
-		  if(l_axis[0] > 5000 && l_axis[0] < 19000)
+		  for(uint8_t i = 0; i < 3; i++)
+		  {
+			  l_accelerations[i] = 9.81 * l_multiple*(((float)l_axis[i] - 32768) / 32768);
+		  }
+
+		  if(l_accelerations[0] > -17.5 && l_accelerations[0] < -0.5)
 		  {
 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
-		  }else if(l_axis[0] >= 40000 && l_axis[0] < 65000)
+		  }else if(l_accelerations[0] >= 0.5 && l_accelerations[0] < 17.5)
 		  {
 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
 		  }
 
-		  if(l_axis[1] > 5000 && l_axis[1] < 19000)
+		  if(l_accelerations[1] > -17.5 && l_accelerations[1] < -0.5)
 		  {
 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
-		  }else if(l_axis[1] >= 50000)
+		  }else if(l_accelerations[1] >= 0.5 && l_accelerations[1] < 17.5)
 		  {
 			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
 		  }
