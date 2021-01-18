@@ -60,6 +60,8 @@
 #define LIS3DSH_CTRL_REG5_SIM_4WIRE	((uint8_t) 0x00)
 #define LIS3DSH_CTRL_REG5_SIM_3WIRE	((uint8_t) 0x01)
 
+#define LIS3DSH_EARTH_GRAVITY		((float)  -9.81)
+
 
 typedef enum {
 	LIS3DSH_OK,
@@ -68,9 +70,11 @@ typedef enum {
 	LIS3DSH_READ_ERROR,
 	LIS3DSH_WRITE_ERROR,
 
-	LIS3DSH_GET_AXE_X_ERROR,
-	LIS3DSH_GET_AXE_Y_ERROR,
-	LIS3DSH_GET_AXE_Z_ERROR,
+	LIS3DSH_GET_AXIS_X_ERROR,
+	LIS3DSH_GET_AXIS_Y_ERROR,
+	LIS3DSH_GET_AXIS_Z_ERROR,
+
+	LIS3DSH_GET_ACCELERATION_ERROR,
 }t_e_lis3dsh_error;
 
 typedef enum {
@@ -153,9 +157,21 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
  *
  * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
  *
+ * @param : float *axis - SPI handler pointer used to communicate with the component
+ *
  * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
  */
-t_e_lis3dsh_error LIS3DSH_Get_axes(SPI_HandleTypeDef *hspi,
-	   							   uint16_t *axes);
+t_e_lis3dsh_error LIS3DSH_Get_axis(SPI_HandleTypeDef *hspi,
+	   							   int16_t *axis);
+
+/**
+ * @brief :
+ *
+ * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
+ *
+ * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
+ */
+t_e_lis3dsh_error LIS3DSH_Get_accelerations(SPI_HandleTypeDef *hspi,
+		   	   	   	   	   	   	   	   	    float *accelerations);
 
 #endif /* INC_LIS3DSH_H_ */

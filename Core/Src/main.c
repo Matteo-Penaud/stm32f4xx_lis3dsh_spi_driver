@@ -43,6 +43,8 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim4;
+
 /* USER CODE BEGIN PV */
 t_s_lis3dsh_init l_s_lis3dsh_init;
 t_s_lis3dsh_interrupt l_s_lis3dsh_interrupt;
@@ -57,6 +59,7 @@ t_e_bool l_e_axis_ready;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_TIM4_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -74,9 +77,11 @@ static void MX_NVIC_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint16_t l_axis[3] = {0x00, 0x00, 0x00};
-  float l_accelerations[3] = {0.0f, 0.0f, 0.0f};
-  uint8_t l_multiple = 2;
+  int16_t l_a_axis[3] = {0x00, 0x00, 0x00};
+  float l_a_accelerations[3] = {0.0f, 0.0f, 0.0f};
+
+  uint16_t l_v_offset = 200;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -113,6 +118,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI1_Init();
+  MX_TIM4_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -126,6 +132,11 @@ int main(void)
 
   l_e_axis_ready = FALSE;
 
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -136,34 +147,36 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
-	  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 0);
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 0);
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, 0);
 
 	  if(l_e_axis_ready == TRUE)
 	  {
-		  LIS3DSH_Get_axes(&hspi1, l_axis);
+		  LIS3DSH_Get_axis(&hspi1, l_a_axis);
 
 		  for(uint8_t i = 0; i < 3; i++)
 		  {
-			  l_accelerations[i] = 9.81 * l_multiple*(((float)l_axis[i] - 32768) / 32768);
+			  LIS3DSH_Get_accelerations(&hspi1, l_a_accelerations);
 		  }
 
-		  if(l_accelerations[0] > -17.5 && l_accelerations[0] < -0.5)
+		  if(l_a_axis[0] > l_v_offset)
 		  {
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
-		  }else if(l_accelerations[0] >= 0.5 && l_accelerations[0] < 17.5)
+			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, ((float)l_a_axis[0] / 16384) * 6299);
+		  }
+		  else if(l_a_axis[0] < -l_v_offset)
 		  {
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
+			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, ((float)-l_a_axis[0] / 16384) * 6299);
 		  }
 
-		  if(l_accelerations[1] > -17.5 && l_accelerations[1] < -0.5)
+		  if(l_a_axis[1] > l_v_offset)
 		  {
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
-		  }else if(l_accelerations[1] >= 0.5 && l_accelerations[1] < 17.5)
+			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, ((float)l_a_axis[1] / 16384) * 6299);
+		  }
+		  else if(l_a_axis[1] < -l_v_offset)
 		  {
-			  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, ((float)-l_a_axis[1] / 16384) * 6299);
 		  }
 
 		  l_e_axis_ready = FALSE;
@@ -267,6 +280,70 @@ static void MX_SPI1_Init(void)
 }
 
 /**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 0;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 8399;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 2099;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.Pulse = 4199;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.Pulse = 6299;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.Pulse = 8399;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
+  HAL_TIM_MspPostInit(&htim4);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -286,9 +363,6 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LIS3DSH_CS_GPIO_Port, LIS3DSH_CS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : LIS3DSH_CS_Pin */
   GPIO_InitStruct.Pin = LIS3DSH_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -301,13 +375,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BOOT1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD6_Pin */
-  GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LIS3DSH_INT1_Pin */
   GPIO_InitStruct.Pin = LIS3DSH_INT1_Pin;

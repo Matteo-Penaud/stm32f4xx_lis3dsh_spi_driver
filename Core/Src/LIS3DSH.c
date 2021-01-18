@@ -7,10 +7,14 @@
 
 #include <LIS3DSH.h>
 
+
+/* LOCAL VARIABLES */
 struct {
 	GPIO_TypeDef *GPIO_Port;
 	uint16_t GPIO_Pin;
 }l_s_gpio_config;
+
+uint8_t l_v_calibre;
 
 
 /**
@@ -138,39 +142,93 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 		return LIS3DSH_INIT_ERROR;
 	}
 
+	switch(init_struct->full_scale)
+	{
+	case LIS3DSH_CTRL_REG5_FSCALE_2:
+		l_v_calibre = 2;
+		break;
+	case LIS3DSH_CTRL_REG5_FSCALE_4:
+		l_v_calibre = 4;
+		break;
+	case LIS3DSH_CTRL_REG5_FSCALE_6:
+		l_v_calibre = 6;
+		break;
+	case LIS3DSH_CTRL_REG5_FSCALE_8:
+		l_v_calibre = 8;
+		break;
+	case LIS3DSH_CTRL_REG5_FSCALE_16:
+		l_v_calibre = 16;
+		break;
+	default:
+		return LIS3DSH_GET_ACCELERATION_ERROR;
+	}
+
 	return LIS3DSH_OK;
 }
 
 
 /**
- * @brief :
+ * @brief : This functions get the bare values on all of the 3 axis [X, Y, Z]
  *
  * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
+ * @param : int16_t *axis - pointer to an array, containing the bare values [x,y,z] of the axis
+ * 		@note : those values are bare from the 16 bits axis_HIGH/axis_LOW registers.
+ * 		@note : those values are signed, so 0 m.s-2 is around 32768.
  *
  * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
  */
-t_e_lis3dsh_error LIS3DSH_Get_axes(SPI_HandleTypeDef *hspi,
-								   	uint16_t *axes)
+t_e_lis3dsh_error LIS3DSH_Get_axis(SPI_HandleTypeDef *hspi,
+								   	int16_t *axis)
 {
 	uint8_t dataR[3] = {0x00, 0x00, 0x00};
 
 	if(LIS3DSH_Read_reg(hspi, LIS3DSH_REG_OUT_X_ADDR, dataR, 3) != LIS3DSH_OK)
 	{
-		return LIS3DSH_GET_AXE_X_ERROR;
+		return LIS3DSH_GET_AXIS_X_ERROR;
 	}
-	axes[0] = dataR[1] | dataR[2] << 8;
+	axis[0] = dataR[1] | dataR[2] << 8;
 
 	if(LIS3DSH_Read_reg(hspi, LIS3DSH_REG_OUT_Y_ADDR, dataR, 3) != LIS3DSH_OK)
 	{
-		return LIS3DSH_GET_AXE_Y_ERROR;
+		return LIS3DSH_GET_AXIS_Y_ERROR;
 	}
-	axes[1] = dataR[1] | dataR[2] << 8;
+	axis[1] = dataR[1] | dataR[2] << 8;
 
 	if(LIS3DSH_Read_reg(hspi, LIS3DSH_REG_OUT_Z_ADDR, dataR, 3) != LIS3DSH_OK)
 	{
-		return LIS3DSH_GET_AXE_Z_ERROR;
+		return LIS3DSH_GET_AXIS_Z_ERROR;
 	}
-	axes[2] = dataR[1] | dataR[2] << 8;
+	axis[2] = dataR[1] | dataR[2] << 8;
 
 	return LIS3DSH_OK;
+}
+
+
+/**
+ * @brief : This functions get the acceleration values on all of the 3 axis [X, Y, Z]
+ *
+ * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
+ * @param : float *accelerations - pointer to an array, containing the accelerations [x,y,z] values, in m.s-2
+ *
+ * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
+ */
+t_e_lis3dsh_error LIS3DSH_Get_accelerations(SPI_HandleTypeDef *hspi,
+		   	   	   	   	   	   	   	   	    float *accelerations)
+{
+	int16_t 			l_a_axis[3] = {0x00, 0x00, 0x00};
+	t_e_lis3dsh_error 	l_e_error;
+
+	l_e_error = LIS3DSH_Get_axis(hspi, l_a_axis);
+
+	if(l_e_error != LIS3DSH_OK)
+	{
+		return	l_e_error;
+	}
+
+	for(uint8_t i = 0; i < 3; i++)
+	{
+		accelerations[i] = LIS3DSH_EARTH_GRAVITY * ((float)l_a_axis[i] / (32768 / l_v_calibre));
+	}
+
+	return l_e_error;
 }
