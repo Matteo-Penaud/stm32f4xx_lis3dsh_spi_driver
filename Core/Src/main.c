@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <LIS3DSH.h>
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -77,6 +78,8 @@ static void MX_NVIC_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+  uint8_t l_v_init_try = 0;
+
   int16_t l_a_axis[3] = {0x00, 0x00, 0x00};
   float l_a_accelerations[3] = {0.0f, 0.0f, 0.0f};
 
@@ -123,19 +126,23 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-  l_e_error = LIS3DSH_Init(&hspi1, GPIOE, GPIO_PIN_3, &l_s_lis3dsh_init);
-
-  if(l_e_error != LIS3DSH_OK)
-  {
-	  return l_e_error;
-  }
-
-  l_e_axis_ready = FALSE;
 
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+
+  do{
+	  l_e_error = LIS3DSH_Init(&hspi1, GPIOE, GPIO_PIN_3, &l_s_lis3dsh_init);
+  }while(l_e_error != LIS3DSH_OK && l_v_init_try < 3);
+
+  if(l_e_error != LIS3DSH_OK)
+  {
+	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 8399); // If init KO, light RED LED ON.
+	  return l_e_error;
+  }
+
+  l_e_axis_ready = FALSE;
 
   /* USER CODE END 2 */
 
@@ -155,11 +162,7 @@ int main(void)
 	  if(l_e_axis_ready == TRUE)
 	  {
 		  LIS3DSH_Get_axis(&hspi1, l_a_axis);
-
-		  for(uint8_t i = 0; i < 3; i++)
-		  {
-			  LIS3DSH_Get_accelerations(&hspi1, l_a_accelerations);
-		  }
+		  LIS3DSH_Get_accelerations(&hspi1, l_a_accelerations);
 
 		  if(l_a_axis[0] > l_v_offset)
 		  {
@@ -314,24 +317,21 @@ static void MX_TIM4_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 2099;
+  sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 4199;
   if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 6299;
   if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 8399;
   if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();

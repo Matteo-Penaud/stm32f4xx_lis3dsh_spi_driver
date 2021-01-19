@@ -60,21 +60,24 @@
 #define LIS3DSH_CTRL_REG5_SIM_4WIRE	((uint8_t) 0x00)
 #define LIS3DSH_CTRL_REG5_SIM_3WIRE	((uint8_t) 0x01)
 
-#define LIS3DSH_EARTH_GRAVITY		((float)  -9.81)
+#define LIS3DSH_EARTH_GRAVITY		((float) -9.81f)
+
+
+#define SPI_CS_ENABLE(a_s_gpio_config) 	HAL_GPIO_WritePin(a_s_gpio_config.GPIO_Port, a_s_gpio_config.GPIO_Pin, GPIO_PIN_RESET)
+#define SPI_CS_DISABLE(a_s_gpio_config) HAL_GPIO_WritePin(a_s_gpio_config.GPIO_Port, a_s_gpio_config.GPIO_Pin, GPIO_PIN_SET)
 
 
 typedef enum {
 	LIS3DSH_OK,
 
 	LIS3DSH_INIT_ERROR,
+	LIS3DSH_SCALE_ERROR,
 	LIS3DSH_READ_ERROR,
 	LIS3DSH_WRITE_ERROR,
 
 	LIS3DSH_GET_AXIS_X_ERROR,
 	LIS3DSH_GET_AXIS_Y_ERROR,
 	LIS3DSH_GET_AXIS_Z_ERROR,
-
-	LIS3DSH_GET_ACCELERATION_ERROR,
 }t_e_lis3dsh_error;
 
 typedef enum {
@@ -102,75 +105,25 @@ typedef struct{
 	t_s_lis3dsh_interrupt *int_struct;
 }t_s_lis3dsh_init;
 
-
-/**
- * @brief : Use this function to read a register of lis3dsh
- *
- * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
- * @param : uint8_t reg_addr - address of the targeted register in the LIS3DSH
- * @param : uint8_t *dataR - pointer to store the read value
- * @param : uint8_t size - size (in byte) of the value to read
- *
- * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
- *
- */
 t_e_lis3dsh_error LIS3DSH_Read_reg(SPI_HandleTypeDef *hspi,
 								   uint8_t reg_addr,
 								   uint8_t *dataR,
 								   uint8_t size);
 
-
-/**
- * @brief : Use this function to read a register of lis3dsh
- *
- * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
- * @param : uint8_t reg_addr - address of the targeted register in the LIS3DSH
- * @param : uint8_t *dataW - pointer to the value to write
- * @param : uint8_t size - size (in byte) of the value to write
- *
- * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
- *
- */
 t_e_lis3dsh_error LIS3DSH_Write_reg(SPI_HandleTypeDef *hspi,
 									uint8_t reg_addr,
 									uint8_t *dataW,
 									uint8_t size);
 
 
-/**
- * @brief : Use this function to init the lis3dsh
- *
- * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
- * @param : t_s_lis3dsh_init *init_struct - pointer to the init structure
- *
- * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
- *
- */
 t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 							   GPIO_TypeDef *GPIO_Port,
 							   uint16_t GPIO_Pin,
 							   t_s_lis3dsh_init *init_struct);
 
-
-/**
- * @brief :
- *
- * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
- *
- * @param : float *axis - SPI handler pointer used to communicate with the component
- *
- * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
- */
 t_e_lis3dsh_error LIS3DSH_Get_axis(SPI_HandleTypeDef *hspi,
 	   							   int16_t *axis);
 
-/**
- * @brief :
- *
- * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
- *
- * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
- */
 t_e_lis3dsh_error LIS3DSH_Get_accelerations(SPI_HandleTypeDef *hspi,
 		   	   	   	   	   	   	   	   	    float *accelerations);
 

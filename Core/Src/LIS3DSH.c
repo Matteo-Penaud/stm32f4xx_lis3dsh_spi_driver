@@ -35,13 +35,13 @@ t_e_lis3dsh_error LIS3DSH_Read_reg(SPI_HandleTypeDef *hspi,
 {
 	dataR[0] = 0x80 | reg_addr;
 
-	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_RESET);
+	SPI_CS_ENABLE(l_s_gpio_config);
 	if(HAL_SPI_Receive(hspi, dataR, size, 10) == HAL_OK)
 	{
-		HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
+		SPI_CS_DISABLE(l_s_gpio_config);
 		return LIS3DSH_OK;
 	}
-	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
+	SPI_CS_DISABLE(l_s_gpio_config);
 
 	return LIS3DSH_READ_ERROR;
 }
@@ -66,10 +66,10 @@ t_e_lis3dsh_error LIS3DSH_Write_reg(SPI_HandleTypeDef *hspi,
 	dataW[0] = 0xEF & reg_addr;
 	uint8_t dataR[] = {0x00, 0x00};
 
-	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_RESET);
+	SPI_CS_ENABLE(l_s_gpio_config);
 	if(HAL_SPI_Transmit(hspi, dataW, size, 10) == HAL_OK)
 	{
-		HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
+		SPI_CS_DISABLE(l_s_gpio_config);
 		if(LIS3DSH_Read_reg(hspi, reg_addr, dataR, 2) == LIS3DSH_OK)
 		{
 			if(dataR[1] == dataW[1])
@@ -79,7 +79,7 @@ t_e_lis3dsh_error LIS3DSH_Write_reg(SPI_HandleTypeDef *hspi,
 		}
 	}
 
-	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
+	SPI_CS_DISABLE(l_s_gpio_config);
 
 	return LIS3DSH_WRITE_ERROR;
 }
@@ -104,7 +104,7 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 	l_s_gpio_config.GPIO_Port = GPIO_Port;
 	l_s_gpio_config.GPIO_Pin = GPIO_Pin;
 
-	HAL_GPIO_WritePin(l_s_gpio_config.GPIO_Port, l_s_gpio_config.GPIO_Pin, GPIO_PIN_SET);
+	SPI_CS_DISABLE(l_s_gpio_config);
 
 	/* Sending dummy word on the SPI to avoid bugs */
 	LIS3DSH_Read_reg(hspi, 0x00, l_reg_val, 2);
@@ -120,9 +120,9 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 
 	/* Configuring CTRL_REG3 */
 	l_reg_val[1] = (init_struct->int_struct->dataReadyEnable & 0x80) \
-				 | (init_struct->int_struct->polarity & 0x40) \
-				 | (init_struct->int_struct->latching & 0x20) \
-				 | (init_struct->int_struct->int2_enable & 0x10) \
+				 | (init_struct->int_struct->polarity & 0x40) 		 \
+				 | (init_struct->int_struct->latching & 0x20) 		 \
+				 | (init_struct->int_struct->int2_enable & 0x10) 	 \
 				 | (init_struct->int_struct->int1_enable & 0x08);
 
 	if(LIS3DSH_Write_reg(hspi, LIS3DSH_REG_CTRL_REG3_ADDR, l_reg_val, 2) != LIS3DSH_OK)
@@ -160,12 +160,11 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 		l_v_calibre = 16;
 		break;
 	default:
-		return LIS3DSH_GET_ACCELERATION_ERROR;
+		return LIS3DSH_SCALE_ERROR;
 	}
 
 	return LIS3DSH_OK;
 }
-
 
 /**
  * @brief : This functions get the bare values on all of the 3 axis [X, Y, Z]
@@ -174,6 +173,7 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
  * @param : int16_t *axis - pointer to an array, containing the bare values [x,y,z] of the axis
  * 		@note : those values are bare from the 16 bits axis_HIGH/axis_LOW registers.
  * 		@note : those values are signed, so 0 m.s-2 is around 32768.
+ *
  *
  * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
  */
