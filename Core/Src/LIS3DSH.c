@@ -10,6 +10,8 @@
 /*
  * How to use this driver :
  *
+ * - First, init the SPI in mode 3 (CPOL and CPHA to 1), 10MHz MAX !
+ * - Init the GPIO for CS as an output
  * - Create a t_s_lis3dsh_init struct and fill it with the parameters you want
  * - Create a t_s_lis3dsh_interrupt is you want to use the interrputs (set t_s_lis3dsh_init int_struct field to 0x00 if not used)
  * - Call LIS3DSH_Init() to init the accelerometer
