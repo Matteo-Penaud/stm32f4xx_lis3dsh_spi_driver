@@ -86,22 +86,23 @@ typedef enum {
 }t_e_bool;
 
 typedef struct{
-	uint8_t dataReadyEnable;
-	uint8_t polarity;
-	uint8_t latching;
+	uint8_t dataReadyEnable;			/*CTRL_REG3 register (0x23) : DR_EN*/
+	uint8_t polarity;					/*CTRL_REG3 register (0x23) : IEA*/
+	uint8_t latching;					/*CTRL_REG3 register (0x23) : IEL*/
 
-	t_e_bool int1_enable;
-	t_e_bool int2_enable;
+	t_e_bool int1_enable;				/*CTRL_REG3 register (0x23) : INT1_EN*/
+	t_e_bool int2_enable;				/*CTRL_REG3 register (0x23) : INT2_EN*/
 }t_s_lis3dsh_interrupt;
 
+
 typedef struct{
-	uint8_t SPI_Mode;
-	uint8_t full_scale;
-	uint8_t dataUpdate;
-	uint8_t dataRate;
-	uint8_t z_enable;
-	uint8_t y_enable;
-	uint8_t x_enable;
+	uint8_t SPI_Mode;					/*CTRL_5 register (0x24) : SIM*/
+	uint8_t full_scale;					/*CTRL_5 register (0x24) : FSCALE*/
+	uint8_t dataUpdate;					/*CTRL_4 register (0x20) : BDU*/
+	uint8_t dataRate;					/*CTRL_4 register (0x20) : ODR*/
+	uint8_t z_enable;					/*CTRL_4 register (0x20) : Zen*/
+	uint8_t y_enable;					/*CTRL_4 register (0x20) : Yen*/
+	uint8_t x_enable;					/*CTRL_4 register (0x20) : Xen*/
 	t_s_lis3dsh_interrupt *int_struct;
 }t_s_lis3dsh_init;
 

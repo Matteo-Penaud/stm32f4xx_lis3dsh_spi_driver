@@ -7,6 +7,17 @@
 
 #include <LIS3DSH.h>
 
+/*
+ * How to use this driver :
+ *
+ * - Create a t_s_lis3dsh_init struct and fill it with the parameters you want
+ * - Create a t_s_lis3dsh_interrupt is you want to use the interrputs (set t_s_lis3dsh_init int_struct field to 0x00 if not used)
+ * - Call LIS3DSH_Init() to init the accelerometer
+ * - Then use LIS3DSH_Get_axis() or LIS3DSH_Get_accelerations() following the way you want to use it
+ * - And last, enjoy :)
+ *
+ */
+
 
 /* LOCAL VARIABLES */
 struct {
@@ -48,11 +59,11 @@ t_e_lis3dsh_error LIS3DSH_Read_reg(SPI_HandleTypeDef *hspi,
 
 
 /**
- * @brief : Use this function to read a register of lis3dsh
+ * @brief : Use this function to write a register of lis3dsh. It will read back the register to check writing OK
  *
  * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
  * @param : uint8_t reg_addr - address of the targeted register in the LIS3DSH
- * @param : uint8_t *dataW - pointer to the value to write
+ * @param : uint8_t *dataW - pointer to the value to write in the register (dataW[0] should be empty !)
  * @param : uint8_t size - size (in byte) of the value to write
  *
  * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
@@ -88,6 +99,8 @@ t_e_lis3dsh_error LIS3DSH_Write_reg(SPI_HandleTypeDef *hspi,
  * @brief : Use this function to init the lis3dsh
  *
  * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
+ * @param : GPIO_TypeDef *GPIO_Port - GPIO Port used for CS (Chip Select)
+ * @param : uint16_t GPIO_Pin - GPIO Pin used for CS (Chip Select)
  * @param : t_s_lis3dsh_init *init_struct - pointer to the init structure
  *
  * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error
@@ -119,15 +132,18 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 	}
 
 	/* Configuring CTRL_REG3 */
-	l_reg_val[1] = (init_struct->int_struct->dataReadyEnable & 0x80) \
-				 | (init_struct->int_struct->polarity & 0x40) 		 \
-				 | (init_struct->int_struct->latching & 0x20) 		 \
-				 | (init_struct->int_struct->int2_enable & 0x10) 	 \
-				 | (init_struct->int_struct->int1_enable & 0x08);
-
-	if(LIS3DSH_Write_reg(hspi, LIS3DSH_REG_CTRL_REG3_ADDR, l_reg_val, 2) != LIS3DSH_OK)
+	if(init_struct->int_struct != 0x00)
 	{
-		return LIS3DSH_INIT_ERROR;
+		l_reg_val[1] = (init_struct->int_struct->dataReadyEnable & 0x80) \
+					 | (init_struct->int_struct->polarity & 0x40) 		 \
+					 | (init_struct->int_struct->latching & 0x20) 		 \
+					 | (init_struct->int_struct->int2_enable & 0x10) 	 \
+					 | (init_struct->int_struct->int1_enable & 0x08);
+
+		if(LIS3DSH_Write_reg(hspi, LIS3DSH_REG_CTRL_REG3_ADDR, l_reg_val, 2) != LIS3DSH_OK)
+		{
+			return LIS3DSH_INIT_ERROR;
+		}
 	}
 
 	/* Configuring CTRL_REG4 */
@@ -142,6 +158,7 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
 		return LIS3DSH_INIT_ERROR;
 	}
 
+	/* switching the caliber to fit the right accelerations values */
 	switch(init_struct->full_scale)
 	{
 	case LIS3DSH_CTRL_REG5_FSCALE_2:
@@ -172,7 +189,7 @@ t_e_lis3dsh_error LIS3DSH_Init(SPI_HandleTypeDef *hspi,
  * @param : SPI_HandleTypeDef *hspi - SPI handler pointer used to communicate with the component
  * @param : int16_t *axis - pointer to an array, containing the bare values [x,y,z] of the axis
  * 		@note : those values are bare from the 16 bits axis_HIGH/axis_LOW registers.
- * 		@note : those values are signed, so 0 m.s-2 is around 32768.
+ * 		@note : those values are signed, so 0 m.s-2 is around 0.
  *
  *
  * @retval : t_e_lis3dsh_error - returns the error code if any, or a no error

@@ -1,5 +1,5 @@
-LIS3DSH.c:31:19:LIS3DSH_Read_reg	24	static
-LIS3DSH.c:61:19:LIS3DSH_Write_reg	32	static
-LIS3DSH.c:96:19:LIS3DSH_Init	32	static
-LIS3DSH.c:180:19:LIS3DSH_Get_axis	24	static
-LIS3DSH.c:215:19:LIS3DSH_Get_accelerations	24	static
+LIS3DSH.c:42:19:LIS3DSH_Read_reg	24	static
+LIS3DSH.c:72:19:LIS3DSH_Write_reg	32	static
+LIS3DSH.c:109:19:LIS3DSH_Init	32	static
+LIS3DSH.c:197:19:LIS3DSH_Get_axis	24	static
+LIS3DSH.c:232:19:LIS3DSH_Get_accelerations	24	static
