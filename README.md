@@ -6,4 +6,12 @@ ______
 
 <h2> How to use : </h2>
 
-TODO
+- Download the repo
+- Import the project in STM32CubeIDE
+- Read the "How to use" in the LIS3DSH.c under Core/Src/
+- Run the example code on a STM32F407 Discovery board 
+
+<h2>Using the driver as a library</h2>
+You may also download the LIS3DSH.c and .h under Core/Src and Core/Inc if you want to use the library as standalone.
+
+Don't forget to check the "how to use" in the LIS3DSH.c, and to initialise all the peripherals as wanted.
