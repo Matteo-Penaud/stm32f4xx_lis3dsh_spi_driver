@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under Ultimate Liberty license
-  * SLA0044, the "License"; You may not use this file except in compliance with
-  * the License. You may obtain a copy of the License at:
-  *                             www.st.com/SLA0044
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under Ultimate Liberty license
+ * SLA0044, the "License"; You may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at:
+ *                             www.st.com/SLA0044
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include <LIS3DSH.h>
 #include <stdio.h>
+#include "serial.h"
+#include "string.h"
 
 /* USER CODE END Includes */
 
@@ -46,6 +48,8 @@ SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim4;
 
+UART_HandleTypeDef huart4;
+
 /* USER CODE BEGIN PV */
 t_s_lis3dsh_init l_s_lis3dsh_init;
 t_s_lis3dsh_interrupt l_s_lis3dsh_interrupt;
@@ -61,6 +65,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_UART4_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -78,12 +83,14 @@ static void MX_NVIC_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint8_t l_v_init_try = 0;
+	uint8_t str_uart_msg[SERIAL_MAX_MSG_SIZE] = "";
+	uint16_t msg_size = 0;
+	uint8_t l_v_init_try = 0;
 
-  int16_t l_a_axis[3] = {0x00, 0x00, 0x00};
-  float l_a_accelerations[3] = {0.0f, 0.0f, 0.0f};
+	int16_t l_a_axis[3] = {0x00, 0x00, 0x00};
+	float l_a_accelerations[3] = {0.0f, 0.0f, 0.0f};
 
-  uint16_t l_v_offset = 200;
+	uint16_t l_v_offset = 200;
 
   /* USER CODE END 1 */
 
@@ -93,21 +100,21 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  HAL_Delay(100);
+	HAL_Delay(100);
 
-  l_s_lis3dsh_interrupt.dataReadyEnable = LIS3DSH_CTRL_REG3_DR_EN;
-  l_s_lis3dsh_interrupt.int1_enable = LIS3DSH_CTRL_REG3_INT1_EN;
-  l_s_lis3dsh_interrupt.latching = LIS3DSH_CTRL_REG3_IEL_LATCH;
-  l_s_lis3dsh_interrupt.polarity = LIS3DSH_CTRL_REG3_IEA_HIGH;
+	l_s_lis3dsh_interrupt.dataReadyEnable = LIS3DSH_CTRL_REG3_DR_EN;
+	l_s_lis3dsh_interrupt.int1_enable = LIS3DSH_CTRL_REG3_INT1_EN;
+	l_s_lis3dsh_interrupt.latching = LIS3DSH_CTRL_REG3_IEL_LATCH;
+	l_s_lis3dsh_interrupt.polarity = LIS3DSH_CTRL_REG3_IEA_HIGH;
 
-  l_s_lis3dsh_init.SPI_Mode = LIS3DSH_CTRL_REG5_SIM_4WIRE;
-  l_s_lis3dsh_init.dataRate = LIS3DSH_CTRL_REG4_ODR_100;
-  l_s_lis3dsh_init.dataUpdate = LIS3DSH_CTRL_REG4_BDU_EN;
-  l_s_lis3dsh_init.full_scale = LIS3DSH_CTRL_REG5_FSCALE_2;
-  l_s_lis3dsh_init.x_enable = LIS3DSH_CTRL_REG4_XEN_EN;
-  l_s_lis3dsh_init.y_enable = LIS3DSH_CTRL_REG4_YEN_EN;
-  l_s_lis3dsh_init.z_enable = LIS3DSH_CTRL_REG4_ZEN_EN;
-  l_s_lis3dsh_init.int_struct = &l_s_lis3dsh_interrupt;
+	l_s_lis3dsh_init.SPI_Mode = LIS3DSH_CTRL_REG5_SIM_4WIRE;
+	l_s_lis3dsh_init.dataRate = LIS3DSH_CTRL_REG4_ODR_100;
+	l_s_lis3dsh_init.dataUpdate = LIS3DSH_CTRL_REG4_BDU_EN;
+	l_s_lis3dsh_init.full_scale = LIS3DSH_CTRL_REG5_FSCALE_2;
+	l_s_lis3dsh_init.x_enable = LIS3DSH_CTRL_REG4_XEN_EN;
+	l_s_lis3dsh_init.y_enable = LIS3DSH_CTRL_REG4_YEN_EN;
+	l_s_lis3dsh_init.z_enable = LIS3DSH_CTRL_REG4_ZEN_EN;
+	l_s_lis3dsh_init.int_struct = &l_s_lis3dsh_interrupt;
 
   /* USER CODE END Init */
 
@@ -122,71 +129,79 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_TIM4_Init();
+  MX_UART4_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
 
-  do{
-	  l_e_error = LIS3DSH_Init(&hspi1, GPIOE, GPIO_PIN_3, &l_s_lis3dsh_init);
-  }while(l_e_error != LIS3DSH_OK && l_v_init_try < 3);
+	do{
+		l_e_error = LIS3DSH_Init(&hspi1, GPIOE, GPIO_PIN_3, &l_s_lis3dsh_init);
+	}while(l_e_error != LIS3DSH_OK && l_v_init_try < 3);
 
-  if(l_e_error != LIS3DSH_OK)
-  {
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 8399); // If init KO, light RED LED ON.
-	  return l_e_error;
-  }
+	if(l_e_error != LIS3DSH_OK)
+	{
+		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 8399); // If init KO, light RED LED ON.
+		return l_e_error;
+	}
 
-  l_e_axis_ready = FALSE;
+	l_e_axis_ready = FALSE;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1)
+	{
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 0);
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 0);
-	  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, 0);
+		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 0);
+		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, 0);
+		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, 0);
+		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, 0);
 
-	  if(l_e_axis_ready == TRUE)
-	  {
-		  LIS3DSH_Get_axis(&hspi1, l_a_axis);
-		  LIS3DSH_Get_accelerations(&hspi1, l_a_accelerations);
+		if(l_e_axis_ready == TRUE)
+		{
+			LIS3DSH_Get_axis(&hspi1, l_a_axis);
+			LIS3DSH_Get_accelerations(&hspi1, l_a_accelerations);
 
-		  if(l_a_axis[0] > l_v_offset)
-		  {
-			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, ((float)l_a_axis[0] / 16384) * 6299);
-		  }
-		  else if(l_a_axis[0] < -l_v_offset)
-		  {
-			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, ((float)-l_a_axis[0] / 16384) * 6299);
-		  }
+			if(l_a_axis[0] > l_v_offset)
+			{
+				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_3, ((float)l_a_axis[0] / 16384) * 6299);
+			}
+			else if(l_a_axis[0] < -l_v_offset)
+			{
+				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, ((float)-l_a_axis[0] / 16384) * 6299);
+			}
 
-		  if(l_a_axis[1] > l_v_offset)
-		  {
-			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, ((float)l_a_axis[1] / 16384) * 6299);
-		  }
-		  else if(l_a_axis[1] < -l_v_offset)
-		  {
-			  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, ((float)-l_a_axis[1] / 16384) * 6299);
-		  }
+			if(l_a_axis[1] > l_v_offset)
+			{
+				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, ((float)l_a_axis[1] / 16384) * 6299);
+			}
+			else if(l_a_axis[1] < -l_v_offset)
+			{
+				__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_4, ((float)-l_a_axis[1] / 16384) * 6299);
+			}
 
-		  l_e_axis_ready = FALSE;
-	  }
+			l_e_axis_ready = FALSE;
 
-	  HAL_Delay(10);
-  }
+			sprintf(str_uart_msg, "s;x=%f;y=%f\r\n", l_a_accelerations[0], l_a_accelerations[1]);
+			msg_size = strlen(str_uart_msg) + 1;
+
+			serial_send_string(&huart4, &str_uart_msg[0], msg_size);
+
+			str_uart_msg[0] = '\0';
+		}
+
+		HAL_Delay(10);
+	}
   /* USER CODE END 3 */
 }
 
@@ -203,6 +218,7 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -218,6 +234,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -344,6 +361,39 @@ static void MX_TIM4_Init(void)
 }
 
 /**
+  * @brief UART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART4_Init(void)
+{
+
+  /* USER CODE BEGIN UART4_Init 0 */
+
+  /* USER CODE END UART4_Init 0 */
+
+  /* USER CODE BEGIN UART4_Init 1 */
+
+  /* USER CODE END UART4_Init 1 */
+  huart4.Instance = UART4;
+  huart4.Init.BaudRate = 115200;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART4_Init 2 */
+
+  /* USER CODE END UART4_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -403,11 +453,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1)
+	{
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -422,10 +472,8 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
+	/* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
