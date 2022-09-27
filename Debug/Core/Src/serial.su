@@ -1,2 +1,0 @@
-../Core/Src/serial.c:10:10:__sizeof_string	24	static
-../Core/Src/serial.c:21:6:serial_send_string	24	static
